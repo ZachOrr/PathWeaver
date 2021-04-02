@@ -8,7 +8,8 @@ import edu.wpi.first.pathweaver.path.Path;
 import edu.wpi.first.pathweaver.spline.AbstractSpline;
 import edu.wpi.first.pathweaver.spline.SplineSegment;
 import edu.wpi.first.wpilibj.geometry.Pose2d;
-import edu.wpi.first.wpilibj.kinematics.DifferentialDriveKinematics;
+import edu.wpi.first.wpilibj.geometry.Translation2d;
+import edu.wpi.first.wpilibj.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.wpilibj.spline.PoseWithCurvature;
 import edu.wpi.first.wpilibj.spline.QuinticHermiteSpline;
 import edu.wpi.first.wpilibj.spline.Spline;
@@ -16,6 +17,7 @@ import edu.wpi.first.wpilibj.trajectory.Trajectory;
 import edu.wpi.first.wpilibj.trajectory.TrajectoryConfig;
 import edu.wpi.first.wpilibj.trajectory.TrajectoryGenerator;
 import edu.wpi.first.wpilibj.trajectory.TrajectoryUtil;
+import edu.wpi.first.wpilibj.util.Units;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -112,8 +114,34 @@ public class WpilibSpline extends AbstractSpline {
         try {
             var values = ProjectPreferences.getInstance().getValues();
 
-            TrajectoryConfig config = new TrajectoryConfig(values.getMaxVelocity(), values.getMaxAcceleration())
-                .setKinematics(new DifferentialDriveKinematics(values.getWheelBase())).setReversed(waypoints.get(0).isReversed());
+            var kRobotSizeInches = 17;
+            var kModuleInsetInches = 3.25;
+
+            var kTrackWidthInches = kRobotSizeInches - (kModuleInsetInches * 2);
+            var kWheelBaseInches = kRobotSizeInches - (kModuleInsetInches * 2);
+            var kModuleDistanceCenterInches = Math.hypot(kTrackWidthInches, kWheelBaseInches);
+
+            TrajectoryConfig config = new TrajectoryConfig(
+                values.getMaxVelocity(),
+                values.getMaxAcceleration()
+            ).setKinematics(new SwerveDriveKinematics(
+                new Translation2d(
+                    Units.inchesToMeters(kModuleDistanceCenterInches),
+                    Units.inchesToMeters(-kModuleDistanceCenterInches)
+                ),
+                new Translation2d(
+                    Units.inchesToMeters(kModuleDistanceCenterInches),
+                    Units.inchesToMeters(kModuleDistanceCenterInches)
+                ),
+                new Translation2d(
+                    Units.inchesToMeters(-kModuleDistanceCenterInches),
+                    Units.inchesToMeters(kModuleDistanceCenterInches)
+                ),
+                new Translation2d(
+                    Units.inchesToMeters(-kModuleDistanceCenterInches),
+                    Units.inchesToMeters(-kModuleDistanceCenterInches)
+                )
+            )).setReversed(waypoints.get(0).isReversed());
             Trajectory traj = trajectoryFromWaypoints(waypoints, config);
 
             var prefs = ProjectPreferences.getInstance();
